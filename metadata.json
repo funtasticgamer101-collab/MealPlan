@@ -1,0 +1,5 @@
+{
+  "name": "Comfort Meals",
+  "description": "A weekly meal planner PWA featuring American comfort food, complete with a generated grocery list.",
+  "requestFramePermissions": []
+}
