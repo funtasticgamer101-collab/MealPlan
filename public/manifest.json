@@ -2,7 +2,7 @@
   "name": "Comfort Meals",
   "short_name": "ComfortMeals",
   "description": "Weekly American comfort food meal planner and grocery list.",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#f97316",
