@@ -13,49 +13,37 @@
   <body class="bg-orange-50/30 text-gray-900 antialiased selection:bg-orange-200 selection:text-orange-900">
     <div id="root"></div>
     <script>
-      // Aggressive cache busting script
-      const APP_VERSION = 'v8'; // Increment this to force a hard refresh for all users
-      let currentVersion = null;
-      let storageAvailable = false;
+      // Storage-Independent Cache Busting
+      const APP_VERSION = 'v9';
       const debugLog = [];
       
-      try {
-        currentVersion = localStorage.getItem('app_version');
-        storageAvailable = true;
-      } catch (e) {
-        debugLog.push('Storage blocked: ' + e.message);
+      // 1. Always unregister SW
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then(function(registrations) {
+          for(let registration of registrations) {
+            registration.unregister();
+          }
+        });
       }
       
-      // Only run cache busting if storage is available, to prevent infinite reload loops
-      // when cookies/storage are blocked (e.g., in some Incognito modes)
-      if (storageAvailable && currentVersion !== APP_VERSION) {
-        console.log('New version detected! Clearing caches...');
-        
-        // 1. Unregister all service workers
-        if ('serviceWorker' in navigator) {
-          navigator.serviceWorker.getRegistrations().then(function(registrations) {
-            for(let registration of registrations) {
-              registration.unregister();
-            }
-          });
+      // 2. Always clear Cache Storage
+      if ('caches' in window) {
+        caches.keys().then(function(names) {
+          for (let name of names) {
+            caches.delete(name);
+          }
+        });
+      }
+      
+      // 3. Force reload using URL param to bypass HTTP cache
+      if (window.location.search.indexOf('v=' + APP_VERSION) === -1) {
+        let newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+        if (window.location.search) {
+          newUrl += window.location.search + '&v=' + APP_VERSION;
+        } else {
+          newUrl += '?v=' + APP_VERSION;
         }
-        
-        // 2. Clear all Cache Storage
-        if ('caches' in window) {
-          caches.keys().then(function(names) {
-            for (let name of names) {
-              caches.delete(name);
-            }
-          });
-        }
-        
-        // 3. Update version and reload
-        try {
-          localStorage.setItem('app_version', APP_VERSION);
-          window.location.reload(true);
-        } catch (e) {
-          console.warn('Failed to set app_version, skipping reload to prevent loop');
-        }
+        window.location.replace(newUrl);
       }
       
       window.onerror = function(msg, url, line, col, error) {
