@@ -1,4 +1,4 @@
-const CACHE_NAME = 'comfort-meals-v3';
+const CACHE_NAME = 'comfort-meals-v4';
 
 self.addEventListener('install', event => {
   self.skipWaiting(); // Force the waiting service worker to become the active service worker

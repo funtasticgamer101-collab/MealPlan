@@ -14,6 +14,36 @@
   <body class="bg-orange-50/30 text-gray-900 antialiased selection:bg-orange-200 selection:text-orange-900">
     <div id="root"></div>
     <script>
+      // Aggressive cache busting script
+      const APP_VERSION = 'v4'; // Increment this to force a hard refresh for all users
+      const currentVersion = localStorage.getItem('app_version');
+      
+      if (currentVersion !== APP_VERSION) {
+        console.log('New version detected! Clearing caches...');
+        
+        // 1. Unregister all service workers
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+              registration.unregister();
+            }
+          });
+        }
+        
+        // 2. Clear all Cache Storage
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (let name of names) {
+              caches.delete(name);
+            }
+          });
+        }
+        
+        // 3. Update version and reload
+        localStorage.setItem('app_version', APP_VERSION);
+        window.location.reload(true);
+      }
+      
       window.onerror = function(msg, url, line, col, error) {
         console.error("Global error caught: ", msg, url, line, col, error);
         // If the root is still empty after a few seconds, show a fallback message
@@ -34,7 +64,9 @@
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('%BASE_URL%sw.js').then(registration => {
+          // Append timestamp to force browser to fetch latest sw.js
+          const swUrl = '%BASE_URL%sw.js?v=' + new Date().getTime();
+          navigator.serviceWorker.register(swUrl).then(registration => {
             console.log('SW registered: ', registration);
           }).catch(registrationError => {
             console.log('SW registration failed: ', registrationError);
