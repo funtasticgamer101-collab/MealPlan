@@ -69,18 +69,58 @@
         showFallbackError(event.reason);
       });
 
+      // Catch resource loading errors (e.g., 404 on JS/CSS files)
+      window.addEventListener('error', function(e) {
+        if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
+          console.error("Resource failed to load: ", e.target.src || e.target.href);
+          showFallbackError("Failed to load app resources. Please check your connection or clear cache.");
+        }
+      }, true);
+
+      // Ultimate failsafe: if the app hasn't rendered anything after 3 seconds, show an error.
+      setTimeout(() => {
+        const root = document.getElementById('root');
+        if (root && root.innerHTML.trim() === '') {
+          showFallbackError("The app failed to start. This might be due to a cached broken version or blocked storage.");
+        }
+      }, 3000);
+
       function showFallbackError(msg) {
-        setTimeout(() => {
-          const root = document.getElementById('root');
-          if (root && root.innerHTML === '') {
-            root.innerHTML = '<div style="padding: 20px; text-align: center; color: #f97316;">' +
-              '<h2>Something went wrong loading the app.</h2>' +
-              '<p>Please try clearing your browser cache or doing a hard refresh (Ctrl+F5).</p>' +
-              '<p style="font-size: 10px; color: #999; word-break: break-all;">Error: ' + msg + '</p>' +
-              '</div>';
-          }
-        }, 3000);
+        const root = document.getElementById('root');
+        if (root && root.innerHTML.trim() === '') {
+          root.innerHTML = '<div style="padding: 20px; text-align: center; color: #f97316; font-family: sans-serif; max-width: 400px; margin: 40px auto; background: #fff3ed; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">' +
+            '<h2 style="margin-top: 0;">App Failed to Load</h2>' +
+            '<p style="color: #666; font-size: 14px;">Something went wrong while starting the app.</p>' +
+            '<p style="font-size: 11px; color: #dc2626; word-break: break-all; background: #fee2e2; padding: 8px; border-radius: 4px;">Error: ' + msg + '</p>' +
+            '<button onclick="forceClearAndReload()" style="margin-top: 20px; padding: 12px 24px; background-color: #f97316; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%;">Clear Cache & Reload</button>' +
+            '</div>';
+        }
       }
+
+      window.forceClearAndReload = function() {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then(function(registrations) {
+            for(let registration of registrations) {
+              registration.unregister();
+            }
+          });
+        }
+        if ('caches' in window) {
+          caches.keys().then(function(names) {
+            for (let name of names) {
+              caches.delete(name);
+            }
+          });
+        }
+        try {
+          localStorage.clear();
+          sessionStorage.clear();
+        } catch(e) {}
+        
+        setTimeout(() => {
+          window.location.reload(true);
+        }, 500);
+      };
     </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>

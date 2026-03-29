@@ -43,7 +43,8 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
           <button 
             onClick={() => {
-              localStorage.clear();
+              try { localStorage.clear(); } catch(e) {}
+              try { sessionStorage.clear(); } catch(e) {}
               window.location.reload();
             }}
             style={{ marginTop: '20px', padding: '10px 20px', backgroundColor: '#f97316', color: 'white', border: 'none', borderRadius: '5px', cursor: 'pointer' }}
