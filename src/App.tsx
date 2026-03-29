@@ -34,7 +34,15 @@ export default function App() {
   const [cuisine, setCuisine] = useState(() => localStorage.getItem('cuisine') || 'American Comfort Food');
   const [restrictions, setRestrictions] = useState<string[]>(() => {
     const saved = localStorage.getItem('restrictions');
-    return saved ? JSON.parse(saved) : ['Peanuts', 'Treenuts', 'Caesar Sauce', 'Shrimp', 'Shellfish'];
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved restrictions:", e);
+        localStorage.removeItem('restrictions');
+      }
+    }
+    return ['Peanuts', 'Treenuts', 'Caesar Sauce', 'Shrimp', 'Shellfish'];
   });
 
   const CUISINES = [
@@ -114,7 +122,13 @@ export default function App() {
   }, []);
 
   const initializeGroceries = (loadedPlan: WeeklyPlan) => {
-    const savedChecks = JSON.parse(localStorage.getItem(`groceries-${loadedPlan.weekOf}`) || '{}');
+    let savedChecks = {};
+    try {
+      savedChecks = JSON.parse(localStorage.getItem(`groceries-${loadedPlan.weekOf}`) || '{}');
+    } catch (e) {
+      console.error("Failed to parse saved groceries:", e);
+      localStorage.removeItem(`groceries-${loadedPlan.weekOf}`);
+    }
     setGroceryItems(loadedPlan.groceryList.map(item => ({
       name: item,
       checked: !!savedChecks[item]
