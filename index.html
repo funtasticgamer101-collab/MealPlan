@@ -13,6 +13,23 @@
   </head>
   <body class="bg-orange-50/30 text-gray-900 antialiased selection:bg-orange-200 selection:text-orange-900">
     <div id="root"></div>
+    <script>
+      window.onerror = function(msg, url, line, col, error) {
+        console.error("Global error caught: ", msg, url, line, col, error);
+        // If the root is still empty after a few seconds, show a fallback message
+        setTimeout(() => {
+          const root = document.getElementById('root');
+          if (root && root.innerHTML === '') {
+            root.innerHTML = '<div style="padding: 20px; text-align: center; color: #f97316;">' +
+              '<h2>Something went wrong loading the app.</h2>' +
+              '<p>Please try clearing your browser cache or doing a hard refresh (Ctrl+F5).</p>' +
+              '<p style="font-size: 10px; color: #999;">Error: ' + msg + '</p>' +
+              '</div>';
+          }
+        }, 3000);
+        return false;
+      };
+    </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
