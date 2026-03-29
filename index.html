@@ -15,10 +15,20 @@
     <div id="root"></div>
     <script>
       // Aggressive cache busting script
-      const APP_VERSION = 'v4'; // Increment this to force a hard refresh for all users
-      const currentVersion = localStorage.getItem('app_version');
+      const APP_VERSION = 'v6'; // Increment this to force a hard refresh for all users
+      let currentVersion = null;
+      let storageAvailable = false;
       
-      if (currentVersion !== APP_VERSION) {
+      try {
+        currentVersion = localStorage.getItem('app_version');
+        storageAvailable = true;
+      } catch (e) {
+        console.warn('localStorage access denied in index.html');
+      }
+      
+      // Only run cache busting if storage is available, to prevent infinite reload loops
+      // when cookies/storage are blocked (e.g., in some Incognito modes)
+      if (storageAvailable && currentVersion !== APP_VERSION) {
         console.log('New version detected! Clearing caches...');
         
         // 1. Unregister all service workers
@@ -40,8 +50,12 @@
         }
         
         // 3. Update version and reload
-        localStorage.setItem('app_version', APP_VERSION);
-        window.location.reload(true);
+        try {
+          localStorage.setItem('app_version', APP_VERSION);
+          window.location.reload(true);
+        } catch (e) {
+          console.warn('Failed to set app_version, skipping reload to prevent loop');
+        }
       }
       
       window.onerror = function(msg, url, line, col, error) {

@@ -18,6 +18,8 @@ interface GroceryItem {
   checked: boolean;
 }
 
+import { safeStorage } from './lib/storage';
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<'plan' | 'groceries' | 'nextWeek'>('plan');
   const [plan, setPlan] = useState<WeeklyPlan | null>(null);
@@ -31,15 +33,15 @@ export default function App() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [regenerating, setRegenerating] = useState<{dayIdx: number, type: 'lunch'|'dinner', week: 'current'|'next'} | null>(null);
 
-  const [cuisine, setCuisine] = useState(() => localStorage.getItem('cuisine') || 'American Comfort Food');
+  const [cuisine, setCuisine] = useState(() => safeStorage.getItem('cuisine') || 'American Comfort Food');
   const [restrictions, setRestrictions] = useState<string[]>(() => {
-    const saved = localStorage.getItem('restrictions');
+    const saved = safeStorage.getItem('restrictions');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch (e) {
         console.error("Failed to parse saved restrictions:", e);
-        localStorage.removeItem('restrictions');
+        safeStorage.removeItem('restrictions');
       }
     }
     return ['Peanuts', 'Treenuts', 'Caesar Sauce', 'Shrimp', 'Shellfish'];
@@ -87,7 +89,7 @@ export default function App() {
       setLoading(true);
       setError(null);
       const weekId = getWeekIdentifier();
-      const cached = localStorage.getItem(`plan-${weekId}`);
+      const cached = safeStorage.getItem(`plan-${weekId}`);
       
       if (cached && !forceRegenerate) {
         const parsedPlan = JSON.parse(cached);
@@ -95,18 +97,18 @@ export default function App() {
         initializeGroceries(parsedPlan);
       } else {
         const newPlan = await generateWeeklyPlan(weekId, cuisine, restrictions);
-        localStorage.setItem(`plan-${weekId}`, JSON.stringify(newPlan));
+        safeStorage.setItem(`plan-${weekId}`, JSON.stringify(newPlan));
         setPlan(newPlan);
         initializeGroceries(newPlan);
       }
 
       // Load next week if cached
       const nextWeekId = getWeekIdentifier(1);
-      const cachedNext = localStorage.getItem(`plan-${nextWeekId}`);
+      const cachedNext = safeStorage.getItem(`plan-${nextWeekId}`);
       if (cachedNext && !forceRegenerate) {
         setNextPlan(JSON.parse(cachedNext));
       } else if (forceRegenerate) {
-        localStorage.removeItem(`plan-${nextWeekId}`);
+        safeStorage.removeItem(`plan-${nextWeekId}`);
         setNextPlan(null);
       }
     } catch (err) {
@@ -124,10 +126,10 @@ export default function App() {
   const initializeGroceries = (loadedPlan: WeeklyPlan) => {
     let savedChecks = {};
     try {
-      savedChecks = JSON.parse(localStorage.getItem(`groceries-${loadedPlan.weekOf}`) || '{}');
+      savedChecks = JSON.parse(safeStorage.getItem(`groceries-${loadedPlan.weekOf}`) || '{}');
     } catch (e) {
       console.error("Failed to parse saved groceries:", e);
-      localStorage.removeItem(`groceries-${loadedPlan.weekOf}`);
+      safeStorage.removeItem(`groceries-${loadedPlan.weekOf}`);
     }
     setGroceryItems(loadedPlan.groceryList.map(item => ({
       name: item,
@@ -143,7 +145,7 @@ export default function App() {
           if (item.checked) acc[item.name] = true;
           return acc;
         }, {} as Record<string, boolean>);
-        localStorage.setItem(`groceries-${plan.weekOf}`, JSON.stringify(checks));
+        safeStorage.setItem(`groceries-${plan.weekOf}`, JSON.stringify(checks));
       }
       return next;
     });
@@ -154,7 +156,7 @@ export default function App() {
       setLoadingNext(true);
       const nextWeekId = getWeekIdentifier(1);
       const newPlan = await generateWeeklyPlan(nextWeekId, cuisine, restrictions);
-      localStorage.setItem(`plan-${nextWeekId}`, JSON.stringify(newPlan));
+      safeStorage.setItem(`plan-${nextWeekId}`, JSON.stringify(newPlan));
       setNextPlan(newPlan);
     } catch (err) {
       console.error(err);
@@ -181,7 +183,7 @@ export default function App() {
         };
         updatedDays = newDays;
         const newPlan = { ...prev, days: newDays };
-        localStorage.setItem(`plan-${prev.weekOf}`, JSON.stringify(newPlan));
+        safeStorage.setItem(`plan-${prev.weekOf}`, JSON.stringify(newPlan));
         return newPlan;
       });
 
@@ -190,7 +192,7 @@ export default function App() {
         setTargetPlan(prev => {
           if (!prev) return prev;
           const newPlan = { ...prev, groceryList: newList };
-          localStorage.setItem(`plan-${prev.weekOf}`, JSON.stringify(newPlan));
+          safeStorage.setItem(`plan-${prev.weekOf}`, JSON.stringify(newPlan));
           return newPlan;
         });
         
@@ -214,8 +216,8 @@ export default function App() {
   };
 
   const handleSaveSettings = () => {
-    localStorage.setItem('cuisine', cuisine);
-    localStorage.setItem('restrictions', JSON.stringify(restrictions));
+    safeStorage.setItem('cuisine', cuisine);
+    safeStorage.setItem('restrictions', JSON.stringify(restrictions));
     setShowSettingsModal(false);
     loadPlan(true);
   };
@@ -261,7 +263,7 @@ export default function App() {
             <p>{error}</p>
             <button 
               onClick={() => {
-                localStorage.removeItem(`plan-${getWeekIdentifier()}`);
+                safeStorage.removeItem(`plan-${getWeekIdentifier()}`);
                 window.location.reload();
               }} 
               className="mt-3 bg-red-100 hover:bg-red-200 px-4 py-2 rounded-lg font-medium transition-colors"
