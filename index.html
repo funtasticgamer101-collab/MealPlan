@@ -14,15 +14,16 @@
     <div id="root"></div>
     <script>
       // Aggressive cache busting script
-      const APP_VERSION = 'v7'; // Increment this to force a hard refresh for all users
+      const APP_VERSION = 'v8'; // Increment this to force a hard refresh for all users
       let currentVersion = null;
       let storageAvailable = false;
+      const debugLog = [];
       
       try {
         currentVersion = localStorage.getItem('app_version');
         storageAvailable = true;
       } catch (e) {
-        console.warn('localStorage access denied in index.html');
+        debugLog.push('Storage blocked: ' + e.message);
       }
       
       // Only run cache busting if storage is available, to prevent infinite reload loops
@@ -58,14 +59,14 @@
       }
       
       window.onerror = function(msg, url, line, col, error) {
-        console.error("Global error caught: ", msg, url, line, col, error);
-        showFallbackError(msg);
+        debugLog.push(`[Global] ${msg} @ ${url}:${line}`);
+        showFallbackError(debugLog.join(" || "));
         return false;
       };
 
       window.addEventListener('unhandledrejection', function(event) {
-        console.error("Unhandled promise rejection: ", event.reason);
-        showFallbackError(event.reason);
+        debugLog.push(`[Promise] ${event.reason}`);
+        showFallbackError(debugLog.join(" || "));
       });
 
       // Catch resource loading errors (e.g., 404 on JS/CSS files)
@@ -73,9 +74,9 @@
         if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
           const url = e.target.src || e.target.href;
           // Only trigger for critical JS/CSS files, ignore external images/icons
-          if (url && (url.includes('.js') || url.includes('.css'))) {
-            console.error("Resource failed to load: ", url);
-            showFallbackError("Failed to load resource: " + url);
+          if (url && (url.includes('.js') || url.includes('.css') || url.includes('.tsx'))) {
+            debugLog.push(`[Resource 404] Failed to load: ${url}`);
+            showFallbackError(debugLog.join(" || "));
           }
         }
       }, true);
@@ -84,7 +85,19 @@
       setTimeout(() => {
         const root = document.getElementById('root');
         if (root && root.innerHTML.trim() === '') {
-          showFallbackError("The app failed to start. This might be due to a cached broken version or blocked storage.");
+          // Check if the browser is trying to run the raw source code (main.tsx) instead of the built app
+          const isRawSource = document.documentElement.innerHTML.includes('src="/src/main.tsx"');
+          
+          let finalMsg = "Unknown render failure.";
+          if (isRawSource) {
+            finalMsg = "CONFIGURATION ERROR: You are serving the raw source code from the 'main' branch instead of the built app. Browsers cannot run raw React/TypeScript. Go to GitHub repository Settings -> Pages -> 'Build and deployment' -> Change 'Source' from 'Deploy from a branch' to 'GitHub Actions'.";
+          } else if (debugLog.length > 0) {
+            finalMsg = debugLog.join(" || ");
+          } else if (!storageAvailable) {
+            finalMsg = "Storage is blocked (Incognito mode?) and React failed to mount silently.";
+          }
+
+          showFallbackError(finalMsg);
         }
       }, 3000);
 
