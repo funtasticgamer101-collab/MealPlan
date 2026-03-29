@@ -61,6 +61,13 @@
       window.addEventListener('error', function(e) {
         if (e.target && (e.target.tagName === 'SCRIPT' || e.target.tagName === 'LINK')) {
           const url = e.target.src || e.target.href;
+          
+          // If it's trying to load main.tsx, it's 100% a GitHub Pages configuration error
+          if (url && url.includes('main.tsx')) {
+            showFallbackError("CONFIGURATION ERROR: You are serving the raw source code from the 'main' branch instead of the built app. Browsers cannot run raw React/TypeScript. Please go to your GitHub repository Settings -> Pages -> 'Build and deployment' -> Change 'Source' from 'Deploy from a branch' to 'GitHub Actions'.");
+            return;
+          }
+          
           // Only trigger for critical JS/CSS files, ignore external images/icons
           if (url && (url.includes('.js') || url.includes('.css') || url.includes('.tsx'))) {
             debugLog.push(`[Resource 404] Failed to load: ${url}`);
